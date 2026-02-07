@@ -1,0 +1,15 @@
+{
+  "name": "bedrock-course-starter",
+  "private": true,
+  "workspaces": [
+    "apps/*"
+  ],
+  "scripts": {
+    "dev": "npx concurrently -n api,web -c auto \"npm --workspace apps/api run dev\" \"npm --workspace apps/web run dev\"",
+    "build": "npm --workspace apps/api run build && npm --workspace apps/web run build",
+    "lint": "npm --workspace apps/api run lint && npm --workspace apps/web run lint"
+  },
+  "devDependencies": {
+    "concurrently": "^9.0.1"
+  }
+}
