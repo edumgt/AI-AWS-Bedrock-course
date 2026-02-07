@@ -184,8 +184,28 @@ export default function App() {
         maxTokens: Number(maxTokens),
       }),
     });
-    const j = await r.json();
-    setMessages([...next, { role: "assistant", content: j.text || "(no text)" }]);
+    let j;
+try {
+  j = await (async () => {
+    const ct = (r.headers.get("content-type") || "").toLowerCase();
+    if (!r.ok) {
+      const t = await r.text();
+      throw new Error(`HTTP ${r.status}: ${t}`);
+    }
+    if (ct.includes("application/json")) {
+      return await r.json();
+    }
+    const t = await r.text();
+    throw new Error(`Non-JSON response: ${t.slice(0, 500)}`);
+
+  })();
+} catch (e) {
+  console.error(e);
+  setMessages([...next, { role: "assistant", content: `❌ ${e.message}` }]);
+  return;
+}
+setMessages([...next, { role: "assistant", content: j.text || "(no text)" }]);
+
   }
 
   async function sendStream() {
@@ -262,9 +282,29 @@ export default function App() {
         enableTrace: !!agentTrace,
       }),
     });
-    const j = await r.json();
-    if (j.sessionId) setAgentSessionId(j.sessionId);
-    setMessages([...next, { role: "assistant", content: j.text || "(no text)" }]);
+    let j;
+try {
+  j = await (async () => {
+    const ct = (r.headers.get("content-type") || "").toLowerCase();
+    if (!r.ok) {
+      const t = await r.text();
+      throw new Error(`HTTP ${r.status}: ${t}`);
+    }
+    if (ct.includes("application/json")) {
+      return await r.json();
+    }
+    const t = await r.text();
+    throw new Error(`Non-JSON response: ${t.slice(0, 500)}`);
+
+  })();
+} catch (e) {
+  console.error(e);
+  setMessages([...next, { role: "assistant", content: `❌ ${e.message}` }]);
+  return;
+}
+if (j.sessionId) setAgentSessionId(j.sessionId);
+setMessages([...next, { role: "assistant", content: j.text || "(no text)" }]);
+
   }
 
   async function invokeAgentStream() {

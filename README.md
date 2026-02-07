@@ -171,3 +171,9 @@ API:
 - `GET /api/usage/summary?limit=100`
 
 실습 문서: `labs/09_usage_based_cost.md`
+
+
+---
+
+## Troubleshooting
+- `labs/00_troubleshooting.md` 참고
