@@ -20,6 +20,15 @@ const RagSchema = z.object({
   modelArnOrId: z.string().optional(),
 });
 
+
+
+const EmbedSchema = z.object({
+  modelId: z.string().min(1),
+  text: z.string().min(1),
+  // For providers that support it (e.g., Cohere)
+  inputType: z.enum(["search_document","search_query","classification","clustering"]).optional(),
+});
+
 const AgentInvokeSchema = z.object({
   agentId: z.string().min(1),
   agentAliasId: z.string().min(1),
@@ -29,5 +38,5 @@ const AgentInvokeSchema = z.object({
   endSession: z.boolean().optional(),
 });
 
-module.exports = { ChatSchema, RagSchema, AgentInvokeSchema };
+module.exports = { ChatSchema, RagSchema, AgentInvokeSchema, EmbedSchema };
 

@@ -1,17 +1,20 @@
 const express = require("express");
 const {
   ListFoundationModelsCommand,
+  // Inference Profiles (may require newer AWS SDK)
+  ListInferenceProfilesCommand,
 } = require("@aws-sdk/client-bedrock");
 const {
   ConverseCommand,
   ConverseStreamCommand,
+  InvokeModelCommand,
 } = require("@aws-sdk/client-bedrock-runtime");
 const {
   RetrieveAndGenerateCommand,
   InvokeAgentCommand,
 } = require("@aws-sdk/client-bedrock-agent-runtime");
 
-const { ChatSchema, RagSchema, AgentInvokeSchema } = require("./validators");
+const { ChatSchema, RagSchema, AgentInvokeSchema, EmbedSchema } = require("./validators");
 const usageStore = require("./usageStore");
 
 function toBedrockMessages(messages) {
@@ -99,6 +102,31 @@ router.get("/usage/summary", (req, res) => {
     }
   });
 
+
+router.get("/inference-profiles", async (req, res, next) => {
+  try {
+    if (typeof ListInferenceProfilesCommand !== "function") {
+      return res.status(501).json({
+        error: "NotSupported",
+        message: "ListInferenceProfilesCommand is not available in this AWS SDK version. Update @aws-sdk/client-bedrock.",
+      });
+    }
+    const out = await clients.bedrock.send(new ListInferenceProfilesCommand({}));
+    const summaries = out.inferenceProfileSummaries || out.inferenceProfiles || out.profiles || [];
+    const profiles = summaries.map((p) => ({
+      inferenceProfileId: p.inferenceProfileId || p.id,
+      inferenceProfileArn: p.inferenceProfileArn || p.arn,
+      inferenceProfileName: p.inferenceProfileName || p.name,
+      modelSource: p.modelSource || p.modelArn || p.modelId,
+      createdAt: p.createdAt,
+      status: p.status,
+    }));
+    res.json({ count: profiles.length, profiles });
+  } catch (e) {
+    next(e);
+  }
+});
+
   router.post("/chat", async (req, res, next) => {
     try {
       const data = ChatSchema.parse(req.body);
@@ -134,6 +162,74 @@ if (out?.usage) {
     totalTokens: out.usage.totalTokens,
     estimated: false,
   });
+
+
+// Embeddings (InvokeModel) - provider-specific minimal payloads
+router.post("/embed", async (req, res, next) => {
+  try {
+    const data = EmbedSchema.parse(req.body);
+
+    const mid = data.modelId;
+    let body;
+
+    if (mid.includes("titan-embed")) {
+      // Amazon Titan Embeddings
+      body = { inputText: data.text };
+    } else if (mid.includes("cohere.embed")) {
+      // Cohere Embed v3/v4
+      body = { texts: [data.text], input_type: data.inputType || "search_document" };
+    } else {
+      // Best-effort generic
+      body = { inputText: data.text };
+    }
+
+    const out = await clients.runtime.send(
+      new InvokeModelCommand({
+        modelId: mid,
+        contentType: "application/json",
+        accept: "application/json",
+        body: Buffer.from(JSON.stringify(body)),
+      })
+    );
+
+    const raw = bytesToUtf8(out.body);
+    let parsed;
+    try {
+      parsed = JSON.parse(raw);
+    } catch {
+      parsed = { raw };
+    }
+
+    // Normalize embedding output
+    const embedding =
+      parsed.embedding ||
+      (Array.isArray(parsed.embeddings) ? parsed.embeddings[0] : undefined) ||
+      (Array.isArray(parsed.vectors) ? parsed.vectors[0] : undefined);
+
+    // Best-effort usage extraction
+    const inputTokens =
+      parsed.inputTextTokenCount ||
+      parsed.prompt_tokens ||
+      parsed.promptTokens;
+
+    usageStore.add({
+      kind: "embed",
+      modelId: mid,
+      inputTokens: typeof inputTokens === "number" ? inputTokens : null,
+      outputTokens: null,
+      totalTokens: typeof inputTokens === "number" ? inputTokens : null,
+      estimated: typeof inputTokens !== "number",
+    });
+
+    res.json({
+      modelId: mid,
+      embedding,
+      raw: parsed,
+    });
+  } catch (e) {
+    next(e);
+  }
+});
 }
 
 res.json({
