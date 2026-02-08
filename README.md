@@ -21,6 +21,10 @@
 
 ![alt text](image.png)
 
+### 사전 서비스 사용 컨펌 필요
+
+![alt text](image-3.png)
+
 
 ## 1) 빠른 시작
 
