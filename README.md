@@ -102,6 +102,7 @@ EKS에서 ALB ingress 설치 순서 알려줘
 - Lab 04: 안전장치(가드레일) 붙이기 (설명 + 확장 과제)
 - Lab 05: Knowledge Bases 기반 RAG (RetrieveAndGenerate)
 - Lab 06: 운영(비용/로깅/레이트리밋) & 배포(옵션)
+- Lab 10: SaaS 확장(멀티 테넌트/플랜/쿼터/RPM)
 
 ---
 
@@ -175,6 +176,30 @@ API:
 - `GET /api/usage/summary?limit=100`
 
 실습 문서: `labs/09_usage_based_cost.md`
+
+
+---
+
+
+## 2-4) SaaS 모드(멀티 테넌트)
+
+백엔드에 SaaS 실험 기능이 포함되었습니다.
+
+- 테넌트 식별: `x-api-key` 또는 `x-tenant-id`
+- 플랜: free / pro / enterprise
+- 제한: 월 토큰 한도 + 분당 요청(RPM)
+- API:
+  - `GET /api/saas/plans`
+  - `GET /api/saas/tenant`
+  - `GET /api/saas/tenants`
+
+환경변수(`apps/api/.env`):
+
+```
+SAAS_API_KEYS=team-a:key-a:free,team-b:key-b:pro
+```
+
+실습 문서: `labs/10_saas_blueprint.md`
 
 
 ---
