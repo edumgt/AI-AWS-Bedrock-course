@@ -36,6 +36,7 @@ function add(entry) {
     outputTokens: clampInt(entry.outputTokens),
     totalTokens: clampInt(entry.totalTokens),
     estimated: !!entry.estimated,
+    tenantId: entry.tenantId,
     meta: entry.meta || undefined,
   };
   buf.push(safe);
@@ -43,13 +44,15 @@ function add(entry) {
   return safe;
 }
 
-function list(limit = 50) {
+function list(limit = 50, options = {}) {
   const n = Math.max(1, Math.min(500, Number(limit) || 50));
-  return buf.slice(-n).reverse(); // newest first
+  const tenantId = options.tenantId;
+  const rows = tenantId ? buf.filter((e) => e.tenantId === tenantId) : buf;
+  return rows.slice(-n).reverse(); // newest first
 }
 
-function summary(limit = 100) {
-  const rows = list(limit).slice().reverse(); // oldest->newest for averaging
+function summary(limit = 100, options = {}) {
+  const rows = list(limit, options).slice().reverse(); // oldest->newest for averaging
   let count = 0;
   let inSum = 0;
   let outSum = 0;
